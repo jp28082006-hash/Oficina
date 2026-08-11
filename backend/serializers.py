@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from validate_docbr import CPF, CNPJ
-from .models import Cliente
+from .models import Cliente, Fornecedor
+from .validadores import documento_e_valido
 
 
 class ClienteSerializer(serializers.ModelSerializer):
@@ -21,24 +21,29 @@ class ClienteSerializer(serializers.ModelSerializer):
         cpf_cnpj = attrs.get("cpf_cnpj", getattr(self.instance, "cpf_cnpj", ""))
         digitos = "".join(filter(str.isdigit, cpf_cnpj or ""))
 
-        if tipo == "PF":
-            if len(digitos) != 11:
-                raise serializers.ValidationError(
-                    {"cpf_cnpj": "CPF deve ter exatamente 11 dígitos."}
-                )
-            if not CPF().validate(digitos):
-                raise serializers.ValidationError(
-                    {"cpf_cnpj": "CPF inválido — dígito verificador não confere."}
-                )
-        elif tipo == "PJ":
-            if len(digitos) != 14:
-                raise serializers.ValidationError(
-                    {"cpf_cnpj": "CNPJ deve ter exatamente 14 dígitos."}
-                )
-            if not CNPJ().validate(digitos):
-                raise serializers.ValidationError(
-                    {"cpf_cnpj": "CNPJ inválido — dígito verificador não confere."}
-                )
+        valido, erro = documento_e_valido(tipo, digitos)
+        if not valido:
+            raise serializers.ValidationError({"cpf_cnpj": erro})
+
+        attrs["cpf_cnpj"] = digitos
+        return attrs
+
+
+class FornecedorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Fornecedor
+        fields = "__all__"
+        read_only_fields = ["id", "data_cadastro", "data_atualizacao"]
+
+    def validate(self, attrs):
+        """Mesma lógica de ClienteSerializer.validate — ver comentário lá."""
+        tipo = attrs.get("tipo_pessoa", getattr(self.instance, "tipo_pessoa", None))
+        cpf_cnpj = attrs.get("cpf_cnpj", getattr(self.instance, "cpf_cnpj", ""))
+        digitos = "".join(filter(str.isdigit, cpf_cnpj or ""))
+
+        valido, erro = documento_e_valido(tipo, digitos)
+        if not valido:
+            raise serializers.ValidationError({"cpf_cnpj": erro})
 
         attrs["cpf_cnpj"] = digitos
         return attrs
