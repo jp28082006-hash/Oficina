@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+/*
+  Oficina Clara — sistema de design.
+  Paleta quente e acolhedora: creme de fundo, terracota como marca,
+  teal para valores positivos, âmbar para pendências, vermelho para
+  urgência. Títulos em Baloo 2 (arredondada, receptiva), corpo em Inter,
+  números/placas em Space Mono (leitura rápida de dados tabulares).
+*/
+@theme {
+  --font-display: "Baloo 2", "Inter", sans-serif;
+  --font-sans: "Inter", "Baloo 2", sans-serif;
+  --font-mono: "Space Mono", ui-monospace, monospace;
+
+  --color-cream: #faf6f0;
+  --color-cream-dark: #f1e9db;
+  --color-surface: #ffffff;
+
+  --color-ink: #2b2320;
+  --color-ink-soft: #6f6259;
+  --color-ink-faint: #a89a8d;
+
+  --color-border: #eaded0;
+  --color-border-strong: #ddccb6;
+
+  --color-terracotta-50: #fdf1e7;
+  --color-terracotta-100: #fce4d2;
+  --color-terracotta-400: #e57a3a;
+  --color-terracotta-500: #d9631e;
+  --color-terracotta-600: #b84f16;
+  --color-terracotta-700: #963f11;
+
+  --color-teal-50: #e9f4f1;
+  --color-teal-100: #d7ece5;
+  --color-teal-500: #2f7a6e;
+  --color-teal-600: #246057;
+
+  --color-amber-50: #fdf3e0;
+  --color-amber-100: #fbebcf;
+  --color-amber-500: #d99a2b;
+  --color-amber-600: #b17c1c;
+
+  --color-red-50: #fbeae6;
+  --color-red-100: #f8dcd6;
+  --color-red-500: #c4432b;
+  --color-red-600: #a13521;
+
+  --color-blue-50: #e9f1f8;
+  --color-blue-100: #d8e7f3;
+  --color-blue-500: #3e7cb1;
+  --color-blue-600: #2f6392;
+
+  --shadow-soft: 0 1px 2px rgba(43, 35, 32, 0.04), 0 8px 24px -12px rgba(43, 35, 32, 0.14);
+  --shadow-lift: 0 4px 8px rgba(43, 35, 32, 0.05), 0 16px 32px -16px rgba(43, 35, 32, 0.22);
+
+  --radius-card: 1.25rem;
+  --radius-control: 0.75rem;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-terracotta-100);
+  color: var(--color-terracotta-700);
+}
+
+/* Scrollbar discreta, combinando com a paleta */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 999px;
+  border: 2px solid var(--color-cream);
+}
+
+/* Textura sutil de "bancada" no fundo da aplicação — pontinhos discretos,
+   nada que compita com o conteúdo, só dá um clima de oficina ao creme liso. */
+.workshop-texture {
+  background-image: radial-gradient(var(--color-border-strong) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-position: -8px -8px;
+  opacity: 0.35;
+}
+
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

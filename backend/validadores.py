@@ -6,10 +6,11 @@ CPF/CNPJ (dígito verificador real, via validate_docbr) em dois lugares
 que podem divergir com o tempo — é o mesmo problema que já resolvemos
 nos triggers do banco: uma regra, um lugar só.
 """
+from typing import Tuple, Optional
 from validate_docbr import CPF, CNPJ
 
 
-def documento_e_valido(tipo_pessoa: str, documento: str) -> tuple[bool, str | None]:
+def documento_e_valido(tipo_pessoa: str, documento: str) -> Tuple[bool, Optional[str]]:
     """
     Valida CPF (PF) ou CNPJ (PJ), incluindo dígito verificador real
     (não é só checagem de tamanho).
