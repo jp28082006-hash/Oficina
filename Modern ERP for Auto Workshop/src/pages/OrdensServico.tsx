@@ -11,7 +11,7 @@ import { useToast } from "../components/ui/Toast";
 import { ordensServicoService } from "../services/ordensServico";
 import { clientesService } from "../services/clientes";
 import { veiculosService } from "../services/veiculos";
-import { generateId } from "../lib/mockStore";
+import { ApiError } from "../lib/api";
 import { formatCurrency, formatDate } from "../lib/format";
 import {
   STATUS_OS_LABEL,
@@ -34,6 +34,7 @@ export default function OrdensServico() {
   const [modalAberto, setModalAberto] = useState(false);
   const [editando, setEditando] = useState<OrdemServico | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [erroServidor, setErroServidor] = useState<Record<string, string[]>>();
   const [confirmacao, setConfirmacao] = useState<OrdemServico | null>(null);
 
   async function carregar() {
@@ -50,39 +51,35 @@ export default function OrdensServico() {
 
   function abrirNovo() {
     setEditando(null);
+    setErroServidor(undefined);
     setModalAberto(true);
   }
 
   function abrirEdicao(os: OrdemServico) {
     setEditando(os);
+    setErroServidor(undefined);
     setModalAberto(true);
   }
 
   async function salvar(valores: OrdemServicoFormValues) {
     setSalvando(true);
-    const cliente = clientes.find((c) => c.id === valores.clienteId);
-    const veiculo = veiculos.find((v) => v.id === valores.veiculoId);
+    setErroServidor(undefined);
     try {
       if (editando) {
-        await ordensServicoService.atualizar(editando.id, {
-          ...valores,
-          clienteNome: cliente?.nome_razao_social ?? editando.clienteNome,
-          veiculoDescricao: veiculo ? `${veiculo.modelo} · ${veiculo.placa}` : editando.veiculoDescricao,
-        });
-        notify(`OS #${editando.numero} atualizada.`);
+        const atualizada = await ordensServicoService.atualizar(editando.id, valores);
+        notify(`OS #${atualizada.numero} atualizada.`);
       } else {
-        const numero = await ordensServicoService.proximoNumero();
-        await ordensServicoService.criar({
-          ...valores,
-          id: generateId("os"),
-          numero,
-          clienteNome: cliente?.nome_razao_social ?? "—",
-          veiculoDescricao: veiculo ? `${veiculo.modelo} · ${veiculo.placa}` : "—",
-        });
-        notify(`OS #${numero} criada com sucesso.`);
+        const criada = await ordensServicoService.criar(valores);
+        notify(`OS #${criada.numero} criada com sucesso.`);
       }
       setModalAberto(false);
       await carregar();
+    } catch (err) {
+      if (err instanceof ApiError && err.fieldErrors) {
+        setErroServidor(err.fieldErrors);
+      } else {
+        notify(err instanceof ApiError ? err.message : "Não foi possível salvar.", "error");
+      }
     } finally {
       setSalvando(false);
     }
@@ -191,6 +188,7 @@ export default function OrdensServico() {
           salvando={salvando}
           clientes={clientes}
           veiculos={veiculos}
+          erroServidor={erroServidor}
         />
         {editando && (
           <div className="mt-4 flex justify-end border-t border-border pt-4">

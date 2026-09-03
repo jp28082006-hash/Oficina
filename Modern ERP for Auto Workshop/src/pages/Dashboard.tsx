@@ -12,7 +12,6 @@ import { ordensServicoService } from "../services/ordensServico";
 import { estoqueService } from "../services/estoque";
 import { financeiroService } from "../services/financeiro";
 import { clientesService } from "../services/clientes";
-import { faturamentoMensalSeed } from "../data/seed";
 import { formatCurrency, formatDate } from "../lib/format";
 import { STATUS_OS_LABEL, STATUS_OS_TONE, calcularTotalOS } from "../types/ordemServico";
 import type { OrdemServico } from "../types/ordemServico";
@@ -50,6 +49,26 @@ export default function Dashboard() {
     [ordens],
   );
 
+  const faturamentoMensal = useMemo(() => {
+    const hoje = new Date();
+    const meses = Array.from({ length: 6 }, (_, i) => {
+      const data = new Date(hoje.getFullYear(), hoje.getMonth() - (5 - i), 1);
+      const nomeMes = data.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+      return {
+        chave: `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}`,
+        mes: nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1),
+        valor: 0,
+      };
+    });
+    for (const lancamento of lancamentos) {
+      if (lancamento.tipo !== "receber" || lancamento.status !== "pago") continue;
+      const chave = lancamento.vencimento.slice(0, 7);
+      const alvo = meses.find((m) => m.chave === chave);
+      if (alvo) alvo.valor += lancamento.valor;
+    }
+    return meses;
+  }, [lancamentos]);
+
   return (
     <div>
       <PageHeader title={`Bem-vindo de volta, ${primeiroNome("André Junior")}!`} description="Aqui está o retrato da oficina hoje." />
@@ -74,7 +93,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardBody className="pt-4">
             <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={faturamentoMensalSeed} margin={{ left: -20, right: 10 }}>
+              <AreaChart data={faturamentoMensal} margin={{ left: -20, right: 10 }}>
                 <defs>
                   <linearGradient id="corFaturamento" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#d9631e" stopOpacity={0.35} />

@@ -10,9 +10,10 @@ export interface Produto {
   fornecedorId?: number;
   fornecedorNome?: string;
   criadoEm: string;
+  ativo: boolean;
 }
 
-export type ProdutoFormValues = Omit<Produto, "id" | "criadoEm" | "fornecedorNome">;
+export type ProdutoFormValues = Omit<Produto, "id" | "criadoEm" | "fornecedorNome" | "ativo">;
 
 export const produtoFormValuesVazio: ProdutoFormValues = {
   nome: "",

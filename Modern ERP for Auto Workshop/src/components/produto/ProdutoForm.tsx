@@ -11,11 +11,19 @@ interface ProdutoFormProps {
   onCancelar: () => void;
   salvando?: boolean;
   fornecedores: Pessoa[];
+  erroServidor?: Record<string, string[]>;
 }
 
 const UNIDADES = ["un", "jogo", "litro", "kg", "par", "kit"];
 
-export function ProdutoForm({ valoresIniciais, onSalvar, onCancelar, salvando, fornecedores }: ProdutoFormProps) {
+export function ProdutoForm({
+  valoresIniciais,
+  onSalvar,
+  onCancelar,
+  salvando,
+  fornecedores,
+  erroServidor,
+}: ProdutoFormProps) {
   const [valores, setValores] = useState<ProdutoFormValues>(valoresIniciais);
   const [erros, setErros] = useState<Record<string, string>>({});
 
@@ -31,6 +39,8 @@ export function ProdutoForm({ valoresIniciais, onSalvar, onCancelar, salvando, f
     return Object.keys(proximos).length === 0;
   }
 
+  const erroCampo = (campo: string, campoApi: string) => erros[campo] ?? erroServidor?.[campoApi]?.[0];
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!validar()) return;
@@ -39,7 +49,7 @@ export function ProdutoForm({ valoresIniciais, onSalvar, onCancelar, salvando, f
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <Field label="Nome" required error={erros.nome}>
+      <Field label="Nome" required error={erroCampo("nome", "nome")}>
         <Input value={valores.nome} onChange={(e) => set("nome", e.target.value)} placeholder="Ex: Filtro de óleo" />
       </Field>
 

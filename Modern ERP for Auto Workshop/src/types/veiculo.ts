@@ -11,9 +11,10 @@ export interface Veiculo {
   km: number;
   observacoes?: string;
   criadoEm: string;
+  ativo: boolean;
 }
 
-export type VeiculoFormValues = Omit<Veiculo, "id" | "criadoEm" | "clienteNome">;
+export type VeiculoFormValues = Omit<Veiculo, "id" | "criadoEm" | "clienteNome" | "ativo">;
 
 export const veiculoFormValuesVazio: VeiculoFormValues = {
   clienteId: 0,

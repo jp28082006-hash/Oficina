@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, Package, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, UserX, RotateCcw, Package, AlertTriangle } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SearchInput } from "../components/ui/SearchInput";
 import { Card } from "../components/ui/Card";
@@ -12,7 +12,7 @@ import { ProdutoForm } from "../components/produto/ProdutoForm";
 import { useToast } from "../components/ui/Toast";
 import { estoqueService } from "../services/estoque";
 import { fornecedoresService } from "../services/fornecedores";
-import { generateId } from "../lib/mockStore";
+import { ApiError } from "../lib/api";
 import { formatCurrency } from "../lib/format";
 import { produtoFormValuesVazio } from "../types/produto";
 import type { Produto, ProdutoFormValues } from "../types/produto";
@@ -23,60 +23,75 @@ export default function Estoque() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
+  const [incluirInativos, setIncluirInativos] = useState(false);
   const [fornecedores, setFornecedores] = useState<Pessoa[]>([]);
 
   const [modalAberto, setModalAberto] = useState(false);
   const [editando, setEditando] = useState<Produto | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [erroServidor, setErroServidor] = useState<Record<string, string[]>>();
   const [confirmacao, setConfirmacao] = useState<Produto | null>(null);
 
   async function carregar() {
     setCarregando(true);
-    setProdutos(await estoqueService.listar());
+    setProdutos(await estoqueService.listar(incluirInativos));
     setCarregando(false);
   }
 
   useEffect(() => {
     carregar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incluirInativos]);
+
+  useEffect(() => {
     fornecedoresService.listar().then(setFornecedores).catch(() => setFornecedores([]));
   }, []);
 
   function abrirNovo() {
     setEditando(null);
+    setErroServidor(undefined);
     setModalAberto(true);
   }
 
   function abrirEdicao(produto: Produto) {
     setEditando(produto);
+    setErroServidor(undefined);
     setModalAberto(true);
   }
 
   async function salvar(valores: ProdutoFormValues) {
     setSalvando(true);
-    const fornecedor = fornecedores.find((f) => f.id === valores.fornecedorId);
+    setErroServidor(undefined);
     try {
       if (editando) {
-        await estoqueService.atualizar(editando.id, { ...valores, fornecedorNome: fornecedor?.nome_razao_social });
+        await estoqueService.atualizar(editando.id, valores);
         notify("Produto atualizado.");
       } else {
-        await estoqueService.criar({
-          ...valores,
-          id: generateId("prod"),
-          fornecedorNome: fornecedor?.nome_razao_social,
-          criadoEm: new Date().toISOString(),
-        });
+        await estoqueService.criar(valores);
         notify("Produto cadastrado.");
       }
       setModalAberto(false);
       await carregar();
+    } catch (err) {
+      if (err instanceof ApiError && err.fieldErrors) {
+        setErroServidor(err.fieldErrors);
+      } else {
+        notify(err instanceof ApiError ? err.message : "Não foi possível salvar.", "error");
+      }
     } finally {
       setSalvando(false);
     }
   }
 
-  async function remover(produto: Produto) {
-    await estoqueService.remover(produto.id);
-    notify("Produto removido.");
+  async function inativar(produto: Produto) {
+    await estoqueService.inativar(produto.id);
+    notify("Produto inativado.");
+    await carregar();
+  }
+
+  async function reativar(produto: Produto) {
+    await estoqueService.reativar(produto.id);
+    notify("Produto reativado.");
     await carregar();
   }
 
@@ -94,12 +109,23 @@ export default function Estoque() {
         }
       />
 
-      <SearchInput
-        value={busca}
-        onChange={(e) => setBusca(e.target.value)}
-        placeholder="Buscar por nome ou categoria"
-        className="mb-4 max-w-sm"
-      />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <SearchInput
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por nome ou categoria"
+          className="max-w-sm flex-1"
+        />
+        <label className="flex items-center gap-2 text-sm text-ink-soft">
+          <input
+            type="checkbox"
+            checked={incluirInativos}
+            onChange={(e) => setIncluirInativos(e.target.checked)}
+            className="h-4 w-4 rounded border-border-strong text-terracotta-500 focus:ring-terracotta-200"
+          />
+          Incluir inativos
+        </label>
+      </div>
 
       {carregando ? (
         <div className="grid gap-3">
@@ -137,7 +163,10 @@ export default function Estoque() {
                   return (
                     <tr key={produto.id} className="border-b border-border last:border-b-0 hover:bg-cream-dark/30">
                       <td className="px-4 py-3">
-                        <p className="font-medium text-ink">{produto.nome}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-ink">{produto.nome}</p>
+                          {!produto.ativo && <Badge tone="neutral">Inativo</Badge>}
+                        </div>
                         <p className="text-xs text-ink-faint">{produto.categoria || "Sem categoria"}</p>
                       </td>
                       <td className="px-4 py-3">
@@ -159,9 +188,15 @@ export default function Estoque() {
                           <Button variant="ghost" size="sm" onClick={() => abrirEdicao(produto)}>
                             <Pencil size={15} />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setConfirmacao(produto)}>
-                            <Trash2 size={15} />
-                          </Button>
+                          {produto.ativo ? (
+                            <Button variant="ghost" size="sm" onClick={() => setConfirmacao(produto)}>
+                              <UserX size={15} />
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="sm" onClick={() => reativar(produto)}>
+                              <RotateCcw size={15} />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -180,17 +215,18 @@ export default function Estoque() {
           onCancelar={() => setModalAberto(false)}
           salvando={salvando}
           fornecedores={fornecedores}
+          erroServidor={erroServidor}
         />
       </Modal>
 
       <ConfirmDialog
         open={!!confirmacao}
         onClose={() => setConfirmacao(null)}
-        title="Remover produto?"
-        description={`${confirmacao?.nome} será removido definitivamente do estoque.`}
-        confirmLabel="Remover"
+        title="Inativar produto?"
+        description={`${confirmacao?.nome} não aparecerá mais nas listagens padrão. Você pode reativar quando quiser.`}
+        confirmLabel="Inativar"
         danger
-        onConfirm={() => confirmacao && remover(confirmacao)}
+        onConfirm={() => confirmacao && inativar(confirmacao)}
       />
     </div>
   );

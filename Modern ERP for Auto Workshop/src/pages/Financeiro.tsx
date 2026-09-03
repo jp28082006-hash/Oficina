@@ -11,7 +11,7 @@ import { StatCard } from "../components/ui/StatCard";
 import { LancamentoForm } from "../components/financeiro/LancamentoForm";
 import { useToast } from "../components/ui/Toast";
 import { financeiroService } from "../services/financeiro";
-import { generateId } from "../lib/mockStore";
+import { ApiError } from "../lib/api";
 import { formatCurrency, formatDate } from "../lib/format";
 import { lancamentoFormValuesVazio } from "../types/financeiro";
 import type { Lancamento, LancamentoFormValues, StatusLancamento } from "../types/financeiro";
@@ -68,11 +68,13 @@ export default function Financeiro() {
         await financeiroService.atualizar(editando.id, valores);
         notify("Lançamento atualizado.");
       } else {
-        await financeiroService.criar({ ...valores, id: generateId("lan"), criadoEm: new Date().toISOString() });
+        await financeiroService.criar(valores);
         notify("Lançamento cadastrado.");
       }
       setModalAberto(false);
       await carregar();
+    } catch (err) {
+      notify(err instanceof ApiError ? err.message : "Não foi possível salvar.", "error");
     } finally {
       setSalvando(false);
     }

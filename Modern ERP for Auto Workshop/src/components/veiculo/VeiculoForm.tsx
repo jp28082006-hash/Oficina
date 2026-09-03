@@ -15,6 +15,7 @@ interface VeiculoFormProps {
   clientes: Pessoa[];
   carregandoClientes: boolean;
   erroClientes: boolean;
+  erroServidor?: Record<string, string[]>;
 }
 
 export function VeiculoForm({
@@ -25,6 +26,7 @@ export function VeiculoForm({
   clientes,
   carregandoClientes,
   erroClientes,
+  erroServidor,
 }: VeiculoFormProps) {
   const [valores, setValores] = useState<VeiculoFormValues>(valoresIniciais);
   const [erros, setErros] = useState<Record<string, string>>({});
@@ -42,6 +44,8 @@ export function VeiculoForm({
     setErros(proximos);
     return Object.keys(proximos).length === 0;
   }
+
+  const erroCampo = (campo: string, campoApi: string) => erros[campo] ?? erroServidor?.[campoApi]?.[0];
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -73,7 +77,7 @@ export function VeiculoForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <Field label="Cliente" required error={erros.clienteId}>
+      <Field label="Cliente" required error={erroCampo("clienteId", "cliente")}>
         <Select
           value={valores.clienteId || ""}
           onChange={(e) => set("clienteId", Number(e.target.value))}
@@ -89,7 +93,7 @@ export function VeiculoForm({
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Placa" required error={erros.placa}>
+        <Field label="Placa" required error={erroCampo("placa", "placa")}>
           <Input
             value={valores.placa}
             onChange={(e) => set("placa", formatPlaca(e.target.value))}

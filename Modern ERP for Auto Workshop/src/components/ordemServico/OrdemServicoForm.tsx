@@ -7,7 +7,7 @@ import type { OrdemServicoFormValues, ItemOS, StatusOS } from "../../types/ordem
 import { STATUS_OS_LABEL, calcularTotalOS } from "../../types/ordemServico";
 import type { Pessoa } from "../../types/pessoa";
 import type { Veiculo } from "../../types/veiculo";
-import { generateId } from "../../lib/mockStore";
+import { generateId } from "../../lib/id";
 import { formatCurrency } from "../../lib/format";
 
 interface OrdemServicoFormProps {
@@ -17,6 +17,7 @@ interface OrdemServicoFormProps {
   salvando?: boolean;
   clientes: Pessoa[];
   veiculos: Veiculo[];
+  erroServidor?: Record<string, string[]>;
 }
 
 const MECANICOS = ["Paulo Mecânico", "Diego Silva", "Camila Torres"];
@@ -28,6 +29,7 @@ export function OrdemServicoForm({
   salvando,
   clientes,
   veiculos,
+  erroServidor,
 }: OrdemServicoFormProps) {
   const [valores, setValores] = useState<OrdemServicoFormValues>(valoresIniciais);
   const [erros, setErros] = useState<Record<string, string>>({});
@@ -64,12 +66,13 @@ export function OrdemServicoForm({
     await onSalvar(valores);
   }
 
+  const erroCampo = (campo: string, campoApi: string) => erros[campo] ?? erroServidor?.[campoApi]?.[0];
   const total = calcularTotalOS(valores.itens);
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Cliente" required error={erros.clienteId}>
+        <Field label="Cliente" required error={erroCampo("clienteId", "cliente")}>
           <Select value={valores.clienteId || ""} onChange={(e) => set("clienteId", Number(e.target.value))}>
             <option value="">Selecione…</option>
             {clientes.map((c) => (
@@ -80,7 +83,7 @@ export function OrdemServicoForm({
           </Select>
         </Field>
 
-        <Field label="Veículo" required error={erros.veiculoId}>
+        <Field label="Veículo" required error={erroCampo("veiculoId", "veiculo")}>
           <Select value={valores.veiculoId} onChange={(e) => set("veiculoId", e.target.value)}>
             <option value="">Selecione…</option>
             {veiculos.map((v) => (

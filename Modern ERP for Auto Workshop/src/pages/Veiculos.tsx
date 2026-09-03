@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, CarFront, Gauge } from "lucide-react";
+import { Plus, Pencil, UserX, RotateCcw, CarFront, Gauge } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SearchInput } from "../components/ui/SearchInput";
 import { Card } from "../components/ui/Card";
@@ -12,7 +12,7 @@ import { VeiculoForm } from "../components/veiculo/VeiculoForm";
 import { useToast } from "../components/ui/Toast";
 import { veiculosService } from "../services/veiculos";
 import { clientesService } from "../services/clientes";
-import { generateId } from "../lib/mockStore";
+import { ApiError } from "../lib/api";
 import { veiculoFormValuesVazio } from "../types/veiculo";
 import type { Veiculo, VeiculoFormValues } from "../types/veiculo";
 import type { Pessoa } from "../types/pessoa";
@@ -22,6 +22,7 @@ export default function Veiculos() {
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
+  const [incluirInativos, setIncluirInativos] = useState(false);
 
   const [clientes, setClientes] = useState<Pessoa[]>([]);
   const [carregandoClientes, setCarregandoClientes] = useState(true);
@@ -30,16 +31,21 @@ export default function Veiculos() {
   const [modalAberto, setModalAberto] = useState(false);
   const [editando, setEditando] = useState<Veiculo | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [erroServidor, setErroServidor] = useState<Record<string, string[]>>();
   const [confirmacao, setConfirmacao] = useState<Veiculo | null>(null);
 
   async function carregar() {
     setCarregando(true);
-    setVeiculos(await veiculosService.listar());
+    setVeiculos(await veiculosService.listar(incluirInativos));
     setCarregando(false);
   }
 
   useEffect(() => {
     carregar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incluirInativos]);
+
+  useEffect(() => {
     clientesService
       .listar()
       .then(setClientes)
@@ -49,40 +55,49 @@ export default function Veiculos() {
 
   function abrirNovo() {
     setEditando(null);
+    setErroServidor(undefined);
     setModalAberto(true);
   }
 
   function abrirEdicao(veiculo: Veiculo) {
     setEditando(veiculo);
+    setErroServidor(undefined);
     setModalAberto(true);
   }
 
   async function salvar(valores: VeiculoFormValues) {
     setSalvando(true);
-    const cliente = clientes.find((c) => c.id === valores.clienteId);
+    setErroServidor(undefined);
     try {
       if (editando) {
-        await veiculosService.atualizar(editando.id, { ...valores, clienteNome: cliente?.nome_razao_social });
+        await veiculosService.atualizar(editando.id, valores);
         notify("Veículo atualizado com sucesso.");
       } else {
-        await veiculosService.criar({
-          ...valores,
-          id: generateId("vei"),
-          clienteNome: cliente?.nome_razao_social ?? "—",
-          criadoEm: new Date().toISOString(),
-        });
+        await veiculosService.criar(valores);
         notify("Veículo cadastrado com sucesso.");
       }
       setModalAberto(false);
       await carregar();
+    } catch (err) {
+      if (err instanceof ApiError && err.fieldErrors) {
+        setErroServidor(err.fieldErrors);
+      } else {
+        notify(err instanceof ApiError ? err.message : "Não foi possível salvar.", "error");
+      }
     } finally {
       setSalvando(false);
     }
   }
 
-  async function remover(veiculo: Veiculo) {
-    await veiculosService.remover(veiculo.id);
-    notify("Veículo removido.");
+  async function inativar(veiculo: Veiculo) {
+    await veiculosService.inativar(veiculo.id);
+    notify("Veículo inativado.");
+    await carregar();
+  }
+
+  async function reativar(veiculo: Veiculo) {
+    await veiculosService.reativar(veiculo.id);
+    notify("Veículo reativado.");
     await carregar();
   }
 
@@ -103,12 +118,23 @@ export default function Veiculos() {
         }
       />
 
-      <SearchInput
-        value={busca}
-        onChange={(e) => setBusca(e.target.value)}
-        placeholder="Buscar por placa, modelo ou cliente"
-        className="mb-4 max-w-sm"
-      />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <SearchInput
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por placa, modelo ou cliente"
+          className="max-w-sm flex-1"
+        />
+        <label className="flex items-center gap-2 text-sm text-ink-soft">
+          <input
+            type="checkbox"
+            checked={incluirInativos}
+            onChange={(e) => setIncluirInativos(e.target.checked)}
+            className="h-4 w-4 rounded border-border-strong text-terracotta-500 focus:ring-terracotta-200"
+          />
+          Incluir inativos
+        </label>
+      </div>
 
       {carregando ? (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -138,6 +164,7 @@ export default function Veiculos() {
                     <Badge tone="neutral">
                       <span className="tabular">{veiculo.placa}</span>
                     </Badge>
+                    {!veiculo.ativo && <Badge tone="neutral">Inativo</Badge>}
                   </div>
                   <p className="text-sm text-ink-soft">
                     {veiculo.marca} · {veiculo.anoFabricacao}/{veiculo.anoModelo} · {veiculo.cor || "cor não informada"}
@@ -151,9 +178,15 @@ export default function Veiculos() {
                   <Button variant="secondary" size="sm" onClick={() => abrirEdicao(veiculo)}>
                     <Pencil size={15} />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setConfirmacao(veiculo)}>
-                    <Trash2 size={15} />
-                  </Button>
+                  {veiculo.ativo ? (
+                    <Button variant="ghost" size="sm" onClick={() => setConfirmacao(veiculo)}>
+                      <UserX size={15} />
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" size="sm" onClick={() => reativar(veiculo)}>
+                      <RotateCcw size={15} />
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
@@ -175,17 +208,18 @@ export default function Veiculos() {
           clientes={clientes}
           carregandoClientes={carregandoClientes}
           erroClientes={erroClientes}
+          erroServidor={erroServidor}
         />
       </Modal>
 
       <ConfirmDialog
         open={!!confirmacao}
         onClose={() => setConfirmacao(null)}
-        title="Remover veículo?"
-        description={`${confirmacao?.modelo} (${confirmacao?.placa}) será removido definitivamente.`}
-        confirmLabel="Remover"
+        title="Inativar veículo?"
+        description={`${confirmacao?.modelo} (${confirmacao?.placa}) não aparecerá mais nas listagens padrão. Você pode reativar quando quiser.`}
+        confirmLabel="Inativar"
         danger
-        onConfirm={() => confirmacao && remover(confirmacao)}
+        onConfirm={() => confirmacao && inativar(confirmacao)}
       />
     </div>
   );
