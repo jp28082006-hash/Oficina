@@ -19,6 +19,16 @@ python manage.py runserver
 
 API disponível em `http://localhost:8000/api/` (admin em `/admin/`).
 
+### Popular com dados de exemplo
+
+```bash
+python manage.py popular_dados            # adiciona por cima do que já existe
+python manage.py popular_dados --reset    # apaga tudo antes de popular
+```
+
+Cria clientes (PF/PJ), fornecedores, veículos, produtos, ordens de serviço
+(com itens) e lançamentos financeiros — com CPF/CNPJ válidos de verdade.
+
 ## Rodando o frontend
 
 ```bash

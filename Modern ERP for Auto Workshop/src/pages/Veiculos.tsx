@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import { Plus, Pencil, UserX, RotateCcw, CarFront, Gauge } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SearchInput } from "../components/ui/SearchInput";
@@ -19,6 +20,7 @@ import type { Pessoa } from "../types/pessoa";
 
 export default function Veiculos() {
   const { notify } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
@@ -52,6 +54,15 @@ export default function Veiculos() {
       .catch(() => setErroClientes(true))
       .finally(() => setCarregandoClientes(false));
   }, []);
+
+  useEffect(() => {
+    const idParam = searchParams.get("abrir");
+    if (!idParam || veiculos.length === 0) return;
+    const alvo = veiculos.find((v) => v.id === idParam);
+    if (alvo) abrirEdicao(alvo);
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, veiculos]);
 
   function abrirNovo() {
     setEditando(null);

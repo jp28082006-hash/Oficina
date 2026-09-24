@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Bell, Menu, PackageX, ClipboardX, CircleDollarSign } from "lucide-react";
+import { Bell, Menu, Search, PackageX, ClipboardX, CircleDollarSign } from "lucide-react";
 import { useAlertas } from "../../hooks/useAlertas";
 import { MobileNav } from "./MobileNav";
 
@@ -10,7 +10,13 @@ const ICON_BY_TIPO = {
   financeiro: CircleDollarSign,
 } as const;
 
-export function Header() {
+const EH_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform ?? navigator.userAgent);
+
+interface HeaderProps {
+  onAbrirBusca: () => void;
+}
+
+export function Header({ onAbrirBusca }: HeaderProps) {
   const alertas = useAlertas();
   const [notifOpen, setNotifOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -23,6 +29,25 @@ export function Header() {
         aria-label="Abrir menu"
       >
         <Menu size={22} />
+      </button>
+
+      <button
+        onClick={onAbrirBusca}
+        className="rounded-control p-2 text-ink-soft hover:bg-cream-dark sm:hidden"
+        aria-label="Buscar"
+      >
+        <Search size={20} />
+      </button>
+
+      <button
+        onClick={onAbrirBusca}
+        className="hidden h-10 w-full max-w-sm items-center gap-2 rounded-control border border-border-strong bg-white px-3 text-sm text-ink-faint transition-colors hover:border-terracotta-300 hover:text-ink-soft sm:flex"
+      >
+        <Search size={16} />
+        <span className="flex-1 text-left">Buscar cliente, veículo, OS…</span>
+        <kbd className="rounded border border-border-strong bg-cream-dark px-1.5 py-0.5 text-[10px] font-semibold">
+          {EH_MAC ? "⌘K" : "Ctrl+K"}
+        </kbd>
       </button>
 
       <div className="flex-1" />

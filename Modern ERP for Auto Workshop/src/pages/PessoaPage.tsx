@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import { Plus, Pencil, RotateCcw, UserX, Mail, Phone, MapPin } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SearchInput } from "../components/ui/SearchInput";
@@ -26,6 +27,7 @@ interface PessoaPageProps {
 
 export function PessoaPage({ titulo, descricao, labelSingular, service, icone: Icone }: PessoaPageProps) {
   const { notify } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erroCarga, setErroCarga] = useState<string | null>(null);
@@ -58,6 +60,15 @@ export function PessoaPage({ titulo, descricao, labelSingular, service, icone: I
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busca, incluirInativos]);
+
+  useEffect(() => {
+    const idParam = searchParams.get("abrir");
+    if (!idParam || pessoas.length === 0) return;
+    const alvo = pessoas.find((p) => p.id === Number(idParam));
+    if (alvo) abrirEdicao(alvo);
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, pessoas]);
 
   function abrirNovo() {
     setPessoaEditando(null);
