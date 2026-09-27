@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 db.sqlite3
 *.log
+/staticfiles/
 
 # Node / front-end
 node_modules/

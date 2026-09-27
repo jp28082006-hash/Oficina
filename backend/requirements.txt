@@ -4,3 +4,9 @@ django-filter==23.2
 django-cors-headers==4.9.0
 validate-docbr==1.10.0
 python-decouple==3.8
+
+# Produção / deploy
+gunicorn==23.0.0
+whitenoise==6.11.0
+dj-database-url==3.0.1
+psycopg2-binary==2.9.12
